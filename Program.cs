@@ -4,10 +4,14 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDb>(opt => opt.UseSqlite("Data Source=parcelpilot.db"));
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c => c.SwaggerDoc("v1", new() { Title = "ParcelPilot API", Version = "v1" }));
 
 var app = builder.Build();
 
 app.UseCors();
+app.UseSwagger();
+app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "ParcelPilot API v1"));
 
 // Seed and migrate
 using (var scope = app.Services.CreateScope())
