@@ -40,15 +40,21 @@ builder.Services.AddScoped<IBusinessRepository, BusinessRepository>();
 
 var jwtSecret = builder.Configuration["Jwt:Secret"] ?? "parcelpilot-dev-secret-key-change-in-prod";
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(o => o.TokenValidationParameters = new TokenValidationParameters
+    .AddJwtBearer(o =>
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = "parcelpilot",
-        ValidAudience = "parcelpilot",
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
+        o.MapInboundClaims = false;
+        o.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = "parcelpilot",
+            ValidAudience = "parcelpilot",
+            RoleClaimType = "role",
+            NameClaimType = "name",
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
+        };
     });
 builder.Services.AddAuthorization();
 

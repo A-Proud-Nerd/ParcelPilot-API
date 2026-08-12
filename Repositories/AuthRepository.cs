@@ -109,8 +109,10 @@ public class AuthRepository(AppDb db, IConfiguration config) : IAuthRepository
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim("role", user.Role),
+            new Claim(ClaimTypes.Role, user.Role),
             new Claim("profileId", user.ProfileId.ToString()),
             new Claim("name", name),
+            new Claim(ClaimTypes.Name, name),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 

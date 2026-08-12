@@ -14,7 +14,7 @@ public static class DeliveryEndpoints
             var user = ctx.User;
             if (user?.Identity?.IsAuthenticated == true)
             {
-                var role = user.FindFirst("role")?.Value;
+                var role = user.FindFirst("role")?.Value ?? user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
                 var pidClaim = user.FindFirst("profileId")?.Value;
                 if (role == "pilot" && Guid.TryParse(pidClaim, out var pilotId))
                 {
@@ -43,7 +43,8 @@ public static class DeliveryEndpoints
         app.MapPost("/deliveries", async (HttpContext ctx, CreateDeliveryRequest req, IDeliveryRepository repo) =>
         {
             var user = ctx.User;
-            if (user?.Identity?.IsAuthenticated != true || user.FindFirst("role")?.Value != "business")
+            var role = user?.FindFirst("role")?.Value ?? user?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            if (user?.Identity?.IsAuthenticated != true || role != "business")
                 return Results.Forbid();
 
             var profileId = Guid.Parse(user.FindFirst("profileId")?.Value ?? Guid.Empty.ToString());
@@ -110,7 +111,8 @@ public static class DeliveryEndpoints
         app.MapPost("/deliveries/{id}/quotes", async (HttpContext ctx, Guid id, SubmitQuoteRequest req, IPilotRepository pilotRepo, IDeliveryRepository repo) =>
         {
             var user = ctx.User;
-            if (user?.Identity?.IsAuthenticated != true || user.FindFirst("role")?.Value != "pilot")
+            var role = user?.FindFirst("role")?.Value ?? user?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            if (user?.Identity?.IsAuthenticated != true || role != "pilot")
                 return Results.Forbid();
 
             var profileId = Guid.Parse(user.FindFirst("profileId")?.Value ?? Guid.Empty.ToString());
@@ -146,7 +148,8 @@ public static class DeliveryEndpoints
         app.MapPut("/deliveries/{id}/quotes/{qid}/accept", async (HttpContext ctx, Guid id, Guid qid, IDeliveryRepository repo) =>
         {
             var user = ctx.User;
-            if (user?.Identity?.IsAuthenticated != true || user.FindFirst("role")?.Value != "business")
+            var role = user?.FindFirst("role")?.Value ?? user?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            if (user?.Identity?.IsAuthenticated != true || role != "business")
                 return Results.Forbid();
 
             var profileId = Guid.Parse(user.FindFirst("profileId")?.Value ?? Guid.Empty.ToString());
