@@ -12,7 +12,9 @@ public record CreateDeliveryRequest(
     string? DropoffCity,
     decimal WeightKg,
     string? Priority,
-    bool RequiresSignature
+    bool RequiresSignature,
+    bool IsPublic = false,
+    int? PilotId = null
 );
 
 public record SubmitQuoteRequest(

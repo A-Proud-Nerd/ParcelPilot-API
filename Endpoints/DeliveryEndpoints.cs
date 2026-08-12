@@ -8,8 +8,31 @@ public static class DeliveryEndpoints
 {
     public static void MapDeliveryEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/deliveries", async (IDeliveryRepository repo) =>
-            await repo.GetAllAsync());
+        app.MapGet("/deliveries", async (HttpContext ctx, IDeliveryRepository repo) =>
+        {
+            var deliveries = await repo.GetAllAsync();
+            var user = ctx.User;
+            if (user?.Identity?.IsAuthenticated == true)
+            {
+                var role = user.FindFirst("role")?.Value;
+                var pidClaim = user.FindFirst("profileId")?.Value;
+                if (role == "pilot" && int.TryParse(pidClaim, out var pilotId))
+                {
+                    var visible = deliveries.Where(d => d.AssignedPilotId == pilotId || d.IsPublic).ToList();
+                    return Results.Ok(visible);
+                }
+
+                if (role == "business" && int.TryParse(pidClaim, out var businessId))
+                {
+                    var visible = deliveries.Where(d => d.BusinessId == businessId).ToList();
+                    return Results.Ok(visible);
+                }
+            }
+
+            // Unauthenticated or other roles: only show public deliveries
+            var publics = deliveries.Where(d => d.IsPublic).ToList();
+            return Results.Ok(publics);
+        });
 
         app.MapGet("/deliveries/{id}", async (int id, IDeliveryRepository repo) =>
         {
@@ -17,18 +40,24 @@ public static class DeliveryEndpoints
             return delivery is null ? Results.NotFound() : Results.Ok(delivery);
         });
 
-        app.MapPost("/deliveries", async (CreateDeliveryRequest req, IDeliveryRepository repo) =>
+        app.MapPost("/deliveries", async (HttpContext ctx, CreateDeliveryRequest req, IDeliveryRepository repo) =>
         {
+            var user = ctx.User;
+            if (user?.Identity?.IsAuthenticated != true || user.FindFirst("role")?.Value != "business")
+                return Results.Forbid();
+
+            var profileId = int.Parse(user.FindFirst("profileId")?.Value ?? "0");
+
             var delivery = new Delivery
             {
-                BusinessId = 1,
+                BusinessId = profileId,
                 Reference = $"PP-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() % 100000:D5}",
                 Description = req.Description,
                 WeightKg = req.WeightKg,
                 Priority = req.Priority ?? "standard",
                 RequiresSignature = req.RequiresSignature,
                 Currency = "ZAR",
-                Status = "awaiting_approval",
+                IsPublic = req.IsPublic,
                 CreatedAt = DateTime.UtcNow,
                 Stops =
                 [
@@ -53,6 +82,21 @@ public static class DeliveryEndpoints
                 ]
             };
 
+            // Assignment rules
+            if (req.PilotId.HasValue)
+            {
+                delivery.AssignedPilotId = req.PilotId.Value;
+                delivery.Status = "confirmed"; // directly assigned to chosen pilot
+            }
+            else if (req.IsPublic)
+            {
+                delivery.Status = "awaiting_approval"; // open for quotes
+            }
+            else
+            {
+                delivery.Status = "awaiting_pilot"; // private, business will search/assign
+            }
+
             var created = await repo.CreateAsync(delivery);
             return Results.Created($"/deliveries/{created.Id}", created);
         });
@@ -63,8 +107,20 @@ public static class DeliveryEndpoints
             return delivery is null ? Results.NotFound() : Results.Ok(delivery);
         });
 
-        app.MapPost("/deliveries/{id}/quotes", async (int id, SubmitQuoteRequest req, IPilotRepository pilotRepo, IDeliveryRepository repo) =>
+        app.MapPost("/deliveries/{id}/quotes", async (HttpContext ctx, int id, SubmitQuoteRequest req, IPilotRepository pilotRepo, IDeliveryRepository repo) =>
         {
+            var user = ctx.User;
+            if (user?.Identity?.IsAuthenticated != true || user.FindFirst("role")?.Value != "pilot")
+                return Results.Forbid();
+
+            var profileId = int.Parse(user.FindFirst("profileId")?.Value ?? "0");
+            if (profileId != req.PilotId)
+                return Results.BadRequest("Pilot id mismatch.");
+
+            var delivery = await repo.GetByIdAsync(id);
+            if (delivery == null || !delivery.IsPublic || delivery.Status != "awaiting_approval")
+                return Results.BadRequest("Delivery not open for quotes.");
+
             var pilot = await pilotRepo.GetByIdAsync(req.PilotId);
             var quote = new Quote
             {
@@ -87,10 +143,20 @@ public static class DeliveryEndpoints
                 : Results.Created($"/deliveries/{id}/quotes/{created.Id}", created);
         });
 
-        app.MapPut("/deliveries/{id}/quotes/{qid}/accept", async (int id, int qid, IDeliveryRepository repo) =>
+        app.MapPut("/deliveries/{id}/quotes/{qid}/accept", async (HttpContext ctx, int id, int qid, IDeliveryRepository repo) =>
         {
-            var delivery = await repo.AcceptQuoteAsync(id, qid);
-            return delivery is null ? Results.NotFound() : Results.Ok(delivery);
+            var user = ctx.User;
+            if (user?.Identity?.IsAuthenticated != true || user.FindFirst("role")?.Value != "business")
+                return Results.Forbid();
+
+            var profileId = int.Parse(user.FindFirst("profileId")?.Value ?? "0");
+            // Ensure business owns the delivery
+            var delivery = await repo.GetByIdAsync(id);
+            if (delivery == null || delivery.BusinessId != profileId)
+                return Results.Forbid();
+
+            var updated = await repo.AcceptQuoteAsync(id, qid);
+            return updated is null ? Results.NotFound() : Results.Ok(updated);
         });
     }
 }

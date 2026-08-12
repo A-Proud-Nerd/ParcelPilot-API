@@ -12,6 +12,7 @@ public class Delivery
     public string Currency { get; set; } = "ZAR";
     public string Status { get; set; } = "awaiting_approval";
     public int? AssignedPilotId { get; set; }
+    public bool IsPublic { get; set; } = false;
     public decimal AgreedSubtotal { get; set; }
     public decimal ServiceFee { get; set; }
     public decimal TotalCharge { get; set; }
