@@ -25,5 +25,6 @@ public record AuthResponse(
     string Token,
     string Role,
     int ProfileId,
-    string Name
+    string Name,
+    string? Industry
 );

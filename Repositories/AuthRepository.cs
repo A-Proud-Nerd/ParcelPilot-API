@@ -37,7 +37,7 @@ public class AuthRepository(AppDb db, IConfiguration config) : IAuthRepository
         db.Users.Add(user);
         await db.SaveChangesAsync();
 
-        return (new AuthResponse(GenerateToken(user, business.Name), "business", business.Id, business.Name), null);
+        return (new AuthResponse(GenerateToken(user, business.Name), "business", business.Id, business.Name, business.Industry), null);
     }
 
     public async Task<(AuthResponse? response, string? error)> RegisterPilotAsync(RegisterPilotRequest req)
@@ -74,7 +74,7 @@ public class AuthRepository(AppDb db, IConfiguration config) : IAuthRepository
         db.Users.Add(user);
         await db.SaveChangesAsync();
 
-        return (new AuthResponse(GenerateToken(user, pilot.Name), "pilot", pilot.Id, pilot.Name), null);
+        return (new AuthResponse(GenerateToken(user, pilot.Name), "pilot", pilot.Id, pilot.Name, null), null);
     }
 
     public async Task<(AuthResponse? response, string? error)> LoginAsync(LoginRequest req)
@@ -83,11 +83,20 @@ public class AuthRepository(AppDb db, IConfiguration config) : IAuthRepository
         if (user is null || !BCrypt.Verify(req.Password, user.PasswordHash))
             return (null, "Invalid email or password.");
 
-        string name = user.Role == "business"
-            ? (await db.Businesses.FindAsync(user.ProfileId))?.Name ?? ""
-            : (await db.Pilots.FindAsync(user.ProfileId))?.Name ?? "";
+        string name = "";
+        string? industry = null;
+        if (user.Role == "business")
+        {
+            var biz = await db.Businesses.FindAsync(user.ProfileId);
+            name = biz?.Name ?? "";
+            industry = biz?.Industry;
+        }
+        else
+        {
+            name = (await db.Pilots.FindAsync(user.ProfileId))?.Name ?? "";
+        }
 
-        return (new AuthResponse(GenerateToken(user, name), user.Role, user.ProfileId, name), null);
+        return (new AuthResponse(GenerateToken(user, name), user.Role, user.ProfileId, name, industry), null);
     }
 
     private string GenerateToken(User user, string name)
