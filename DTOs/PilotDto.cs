@@ -1,7 +1,7 @@
 namespace ParcelPilot.Api.DTOs;
 
 public record PilotDto(
-    int Id,
+    Guid Id,
     string Name,
     decimal Rating,
     int CompletedDeliveries,

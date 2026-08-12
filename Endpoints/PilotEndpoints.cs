@@ -9,7 +9,7 @@ public static class PilotEndpoints
         app.MapGet("/pilots", async (IPilotRepository repo) =>
             await repo.GetAllAsync());
 
-        app.MapGet("/pilots/{id}", async (int id, IPilotRepository repo) =>
+        app.MapGet("/pilots/{id}", async (Guid id, IPilotRepository repo) =>
         {
             var pilot = await repo.GetByIdAsync(id);
             return pilot is null ? Results.NotFound() : Results.Ok(pilot);

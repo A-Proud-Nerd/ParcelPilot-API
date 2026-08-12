@@ -9,7 +9,7 @@ public class PilotRepository(AppDb db) : IPilotRepository
     public async Task<List<PilotDto>> GetAllAsync() =>
         (await db.Pilots.ToListAsync()).Select(p => p.ToDto()).ToList();
 
-    public async Task<PilotDto?> GetByIdAsync(int id)
+    public async Task<PilotDto?> GetByIdAsync(Guid id)
     {
         var pilot = await db.Pilots.FindAsync(id);
         return pilot?.ToDto();

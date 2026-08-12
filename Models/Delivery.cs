@@ -2,8 +2,8 @@ namespace ParcelPilot.Api.Models;
 
 public class Delivery
 {
-    public int Id { get; set; }
-    public int BusinessId { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid BusinessId { get; set; }
     public string Reference { get; set; } = "";
     public string Description { get; set; } = "";
     public decimal WeightKg { get; set; }
@@ -11,7 +11,7 @@ public class Delivery
     public bool RequiresSignature { get; set; }
     public string Currency { get; set; } = "ZAR";
     public string Status { get; set; } = "awaiting_approval";
-    public int? AssignedPilotId { get; set; }
+    public Guid? AssignedPilotId { get; set; }
     public bool IsPublic { get; set; } = false;
     public decimal AgreedSubtotal { get; set; }
     public decimal ServiceFee { get; set; }

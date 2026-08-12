@@ -15,7 +15,7 @@ if (!string.IsNullOrEmpty(databaseUrl) && databaseUrl.StartsWith("postgres", Str
 {
     // Convert DATABASE_URL (postgres://user:pass@host:port/db) into Npgsql connection string
     var uri = new Uri(databaseUrl);
-    var userInfo = uri.UserInfo.Split(':');
+    var userInfo = uri.UserInfo.Split(':', 2);
     var builderConn = new Npgsql.NpgsqlConnectionStringBuilder
     {
         Host = uri.Host,
@@ -23,8 +23,7 @@ if (!string.IsNullOrEmpty(databaseUrl) && databaseUrl.StartsWith("postgres", Str
         Username = userInfo.Length > 0 ? userInfo[0] : string.Empty,
         Password = userInfo.Length > 1 ? userInfo[1] : string.Empty,
         Database = uri.AbsolutePath.TrimStart('/'),
-        SslMode = Npgsql.SslMode.Require,
-        TrustServerCertificate = true
+        SslMode = Npgsql.SslMode.Require
     };
     builder.Services.AddDbContext<AppDb>(opt => opt.UseNpgsql(builderConn.ToString()));
 }

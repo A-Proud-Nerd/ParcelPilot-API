@@ -2,8 +2,8 @@ namespace ParcelPilot.Api.Models;
 
 public class DeliveryStop
 {
-    public int Id { get; set; }
-    public int DeliveryId { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid DeliveryId { get; set; }
     public int Sequence { get; set; }
     public string Type { get; set; } = "";
     public string ContactName { get; set; } = "";

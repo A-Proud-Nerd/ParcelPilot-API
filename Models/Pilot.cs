@@ -5,7 +5,7 @@ namespace ParcelPilot.Api.Models;
 
 public class Pilot
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = "";
     public decimal Rating { get; set; }
     public int CompletedDeliveries { get; set; }

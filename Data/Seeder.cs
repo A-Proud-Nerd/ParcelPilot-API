@@ -11,7 +11,7 @@ public static class Seeder
         if (!db.Businesses.Any())
             db.Businesses.Add(new Business
             {
-                Id = 1,
+                Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
                 Name = "Retail Co",
                 Industry = "Retail & e-commerce",
                 Address = "14 Roeland St, Gardens, Cape Town",
@@ -22,7 +22,7 @@ public static class Seeder
             db.Pilots.AddRange(
                 new Pilot
                 {
-                    Id = 1, Name = "Thabo Nkosi", Rating = 4.9m, CompletedDeliveries = 412, ReliabilityScore = 98,
+                    Id = Guid.Parse("22222222-2222-2222-2222-222222222222"), Name = "Thabo Nkosi", Rating = 4.9m, CompletedDeliveries = 412, ReliabilityScore = 98,
                     VehicleType = "van", VehiclePlate = "CA 442-198",
                     ZonesJson = JsonSerializer.Serialize(new[] { "Woodstock", "Salt River", "CBD" }),
                     IsPreferred = true, IsOnline = true, VerificationStatus = "verified",
@@ -30,7 +30,7 @@ public static class Seeder
                 },
                 new Pilot
                 {
-                    Id = 2, Name = "Lerato Dube", Rating = 4.8m, CompletedDeliveries = 289, ReliabilityScore = 95,
+                    Id = Guid.Parse("33333333-3333-3333-3333-333333333333"), Name = "Lerato Dube", Rating = 4.8m, CompletedDeliveries = 289, ReliabilityScore = 95,
                     VehicleType = "sedan", VehiclePlate = "CA 991-322",
                     ZonesJson = JsonSerializer.Serialize(new[] { "Observatory", "Rondebosch" }),
                     IsPreferred = true, IsOnline = true, VerificationStatus = "verified",
@@ -38,7 +38,7 @@ public static class Seeder
                 },
                 new Pilot
                 {
-                    Id = 3, Name = "Sipho Mahlangu", Rating = 4.6m, CompletedDeliveries = 156, ReliabilityScore = 91,
+                    Id = Guid.Parse("44444444-4444-4444-4444-444444444444"), Name = "Sipho Mahlangu", Rating = 4.6m, CompletedDeliveries = 156, ReliabilityScore = 91,
                     VehicleType = "bike", VehiclePlate = "N/A",
                     ZonesJson = JsonSerializer.Serialize(new[] { "CBD", "Gardens" }),
                     IsPreferred = false, IsOnline = false, VerificationStatus = "verified",
@@ -46,7 +46,7 @@ public static class Seeder
                 },
                 new Pilot
                 {
-                    Id = 4, Name = "Nomvula Zulu", Rating = 5.0m, CompletedDeliveries = 67, ReliabilityScore = 99,
+                    Id = Guid.Parse("55555555-5555-5555-5555-555555555555"), Name = "Nomvula Zulu", Rating = 5.0m, CompletedDeliveries = 67, ReliabilityScore = 99,
                     VehicleType = "truck", VehiclePlate = "CA 118-873",
                     ZonesJson = JsonSerializer.Serialize(new[] { "Epping", "Parow", "Bellville" }),
                     IsPreferred = false, IsOnline = true, VerificationStatus = "pending",

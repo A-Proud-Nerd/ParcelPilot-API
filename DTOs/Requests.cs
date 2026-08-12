@@ -14,11 +14,11 @@ public record CreateDeliveryRequest(
     string? Priority,
     bool RequiresSignature,
     bool IsPublic = false,
-    int? PilotId = null
+    Guid? PilotId = null
 );
 
 public record SubmitQuoteRequest(
-    int PilotId,
+    Guid PilotId,
     decimal BaseAmount,
     decimal DistanceAmount,
     string? Note,

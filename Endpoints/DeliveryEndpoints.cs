@@ -16,13 +16,13 @@ public static class DeliveryEndpoints
             {
                 var role = user.FindFirst("role")?.Value;
                 var pidClaim = user.FindFirst("profileId")?.Value;
-                if (role == "pilot" && int.TryParse(pidClaim, out var pilotId))
+                if (role == "pilot" && Guid.TryParse(pidClaim, out var pilotId))
                 {
                     var visible = deliveries.Where(d => d.AssignedPilotId == pilotId || d.IsPublic).ToList();
                     return Results.Ok(visible);
                 }
 
-                if (role == "business" && int.TryParse(pidClaim, out var businessId))
+                if (role == "business" && Guid.TryParse(pidClaim, out var businessId))
                 {
                     var visible = deliveries.Where(d => d.BusinessId == businessId).ToList();
                     return Results.Ok(visible);
@@ -34,7 +34,7 @@ public static class DeliveryEndpoints
             return Results.Ok(publics);
         });
 
-        app.MapGet("/deliveries/{id}", async (int id, IDeliveryRepository repo) =>
+        app.MapGet("/deliveries/{id}", async (Guid id, IDeliveryRepository repo) =>
         {
             var delivery = await repo.GetByIdAsync(id);
             return delivery is null ? Results.NotFound() : Results.Ok(delivery);
@@ -46,7 +46,7 @@ public static class DeliveryEndpoints
             if (user?.Identity?.IsAuthenticated != true || user.FindFirst("role")?.Value != "business")
                 return Results.Forbid();
 
-            var profileId = int.Parse(user.FindFirst("profileId")?.Value ?? "0");
+            var profileId = Guid.Parse(user.FindFirst("profileId")?.Value ?? Guid.Empty.ToString());
 
             var delivery = new Delivery
             {
@@ -101,19 +101,19 @@ public static class DeliveryEndpoints
             return Results.Created($"/deliveries/{created.Id}", created);
         });
 
-        app.MapPut("/deliveries/{id}/status", async (int id, UpdateStatusRequest req, IDeliveryRepository repo) =>
+        app.MapPut("/deliveries/{id}/status", async (Guid id, UpdateStatusRequest req, IDeliveryRepository repo) =>
         {
             var delivery = await repo.UpdateStatusAsync(id, req.Status);
             return delivery is null ? Results.NotFound() : Results.Ok(delivery);
         });
 
-        app.MapPost("/deliveries/{id}/quotes", async (HttpContext ctx, int id, SubmitQuoteRequest req, IPilotRepository pilotRepo, IDeliveryRepository repo) =>
+        app.MapPost("/deliveries/{id}/quotes", async (HttpContext ctx, Guid id, SubmitQuoteRequest req, IPilotRepository pilotRepo, IDeliveryRepository repo) =>
         {
             var user = ctx.User;
             if (user?.Identity?.IsAuthenticated != true || user.FindFirst("role")?.Value != "pilot")
                 return Results.Forbid();
 
-            var profileId = int.Parse(user.FindFirst("profileId")?.Value ?? "0");
+            var profileId = Guid.Parse(user.FindFirst("profileId")?.Value ?? Guid.Empty.ToString());
             if (profileId != req.PilotId)
                 return Results.BadRequest("Pilot id mismatch.");
 
@@ -143,13 +143,13 @@ public static class DeliveryEndpoints
                 : Results.Created($"/deliveries/{id}/quotes/{created.Id}", created);
         });
 
-        app.MapPut("/deliveries/{id}/quotes/{qid}/accept", async (HttpContext ctx, int id, int qid, IDeliveryRepository repo) =>
+        app.MapPut("/deliveries/{id}/quotes/{qid}/accept", async (HttpContext ctx, Guid id, Guid qid, IDeliveryRepository repo) =>
         {
             var user = ctx.User;
             if (user?.Identity?.IsAuthenticated != true || user.FindFirst("role")?.Value != "business")
                 return Results.Forbid();
 
-            var profileId = int.Parse(user.FindFirst("profileId")?.Value ?? "0");
+            var profileId = Guid.Parse(user.FindFirst("profileId")?.Value ?? Guid.Empty.ToString());
             // Ensure business owns the delivery
             var delivery = await repo.GetByIdAsync(id);
             if (delivery == null || delivery.BusinessId != profileId)

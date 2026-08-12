@@ -5,9 +5,9 @@ namespace ParcelPilot.Api.Repositories;
 public interface IDeliveryRepository
 {
     Task<List<Delivery>> GetAllAsync();
-    Task<Delivery?> GetByIdAsync(int id);
+    Task<Delivery?> GetByIdAsync(Guid id);
     Task<Delivery> CreateAsync(Delivery delivery);
-    Task<Delivery?> UpdateStatusAsync(int id, string status);
-    Task<Quote?> AddQuoteAsync(int deliveryId, Quote quote);
-    Task<Delivery?> AcceptQuoteAsync(int deliveryId, int quoteId);
+    Task<Delivery?> UpdateStatusAsync(Guid id, string status);
+    Task<Quote?> AddQuoteAsync(Guid deliveryId, Quote quote);
+    Task<Delivery?> AcceptQuoteAsync(Guid deliveryId, Guid quoteId);
 }

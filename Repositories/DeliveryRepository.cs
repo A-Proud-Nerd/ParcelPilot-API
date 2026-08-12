@@ -13,7 +13,7 @@ public class DeliveryRepository(AppDb db) : IDeliveryRepository
             .OrderByDescending(d => d.CreatedAt)
             .ToListAsync();
 
-    public Task<Delivery?> GetByIdAsync(int id) =>
+    public Task<Delivery?> GetByIdAsync(Guid id) =>
         db.Deliveries
             .Include(d => d.Quotes)
             .Include(d => d.Stops)
@@ -27,7 +27,7 @@ public class DeliveryRepository(AppDb db) : IDeliveryRepository
         return delivery;
     }
 
-    public async Task<Delivery?> UpdateStatusAsync(int id, string status)
+    public async Task<Delivery?> UpdateStatusAsync(Guid id, string status)
     {
         var delivery = await db.Deliveries
             .Include(d => d.Stops)
@@ -50,7 +50,7 @@ public class DeliveryRepository(AppDb db) : IDeliveryRepository
         return delivery;
     }
 
-    public async Task<Quote?> AddQuoteAsync(int deliveryId, Quote quote)
+    public async Task<Quote?> AddQuoteAsync(Guid deliveryId, Quote quote)
     {
         var delivery = await db.Deliveries.FindAsync(deliveryId);
         if (delivery is null || delivery.Status != "awaiting_approval") return null;
@@ -60,7 +60,7 @@ public class DeliveryRepository(AppDb db) : IDeliveryRepository
         return quote;
     }
 
-    public async Task<Delivery?> AcceptQuoteAsync(int deliveryId, int quoteId)
+    public async Task<Delivery?> AcceptQuoteAsync(Guid deliveryId, Guid quoteId)
     {
         var delivery = await db.Deliveries
             .Include(d => d.Quotes)

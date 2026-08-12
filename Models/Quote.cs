@@ -2,9 +2,9 @@ namespace ParcelPilot.Api.Models;
 
 public class Quote
 {
-    public int Id { get; set; }
-    public int DeliveryId { get; set; }
-    public int PilotId { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid DeliveryId { get; set; }
+    public Guid PilotId { get; set; }
     public string PilotName { get; set; } = "";
     public decimal PilotRating { get; set; }
     public decimal BaseAmount { get; set; }

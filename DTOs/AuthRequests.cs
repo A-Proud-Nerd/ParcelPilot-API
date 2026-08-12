@@ -24,7 +24,7 @@ public record LoginRequest(string Email, string Password);
 public record AuthResponse(
     string Token,
     string Role,
-    int ProfileId,
+    Guid ProfileId,
     string Name,
     string? Industry
 );
