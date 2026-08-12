@@ -8,31 +8,30 @@ using ParcelPilot.Api.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Resolve connection: prefer Railway DATABASE_URL env var, fallback to Default connection (sqlite for local dev)
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
-var defaultConn = builder.Configuration.GetConnectionString("Default") ?? "Data Source=parcelpilot.db";
-if (!string.IsNullOrEmpty(databaseUrl) && databaseUrl.StartsWith("postgres", StringComparison.OrdinalIgnoreCase))
+if (string.IsNullOrWhiteSpace(databaseUrl))
 {
-    // Convert DATABASE_URL (postgres://user:pass@host:port/db) into Npgsql connection string
-    var uri = new Uri(databaseUrl);
-    var userInfo = uri.UserInfo.Split(':', 2);
-    var builderConn = new Npgsql.NpgsqlConnectionStringBuilder
-    {
-        Host = uri.Host,
-        Port = uri.Port,
-        Username = userInfo.Length > 0 ? userInfo[0] : string.Empty,
-        Password = userInfo.Length > 1 ? userInfo[1] : string.Empty,
-        Database = uri.AbsolutePath.TrimStart('/'),
-        SslMode = Npgsql.SslMode.Require
-    };
-    builder.Services.AddDbContext<AppDb>(opt => opt.UseNpgsql(builderConn.ToString()));
+    throw new InvalidOperationException("DATABASE_URL is required. Configure the PostgreSQL connection string in Railway before deployment.");
 }
-else
+
+if (!Uri.TryCreate(databaseUrl, UriKind.Absolute, out var uri) || !uri.Scheme.StartsWith("postgres", StringComparison.OrdinalIgnoreCase))
 {
-    // Local fallback (sqlite)
-    builder.Services.AddDbContext<AppDb>(opt =>
-        opt.UseSqlite(defaultConn));
+    throw new InvalidOperationException($"DATABASE_URL must be a PostgreSQL connection string. Received: {databaseUrl}");
 }
+
+var userInfo = uri.UserInfo.Split(':', 2);
+var connectionStringBuilder = new Npgsql.NpgsqlConnectionStringBuilder
+{
+    Host = uri.Host,
+    Port = uri.Port,
+    Username = userInfo.Length > 0 ? userInfo[0] : string.Empty,
+    Password = userInfo.Length > 1 ? userInfo[1] : string.Empty,
+    Database = uri.AbsolutePath.TrimStart('/'),
+    SslMode = Npgsql.SslMode.Require,
+    Pooling = true
+};
+
+builder.Services.AddDbContext<AppDb>(opt => opt.UseNpgsql(connectionStringBuilder.ToString()));
 
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 builder.Services.AddScoped<IDeliveryRepository, DeliveryRepository>();
