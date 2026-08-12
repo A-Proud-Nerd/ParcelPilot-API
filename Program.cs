@@ -8,8 +8,32 @@ using ParcelPilot.Api.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<AppDb>(opt =>
-    opt.UseSqlite(builder.Configuration.GetConnectionString("Default") ?? "Data Source=parcelpilot.db"));
+// Resolve connection: prefer Railway DATABASE_URL env var, fallback to Default connection (sqlite for local dev)
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+var defaultConn = builder.Configuration.GetConnectionString("Default") ?? "Data Source=parcelpilot.db";
+if (!string.IsNullOrEmpty(databaseUrl) && databaseUrl.StartsWith("postgres", StringComparison.OrdinalIgnoreCase))
+{
+    // Convert DATABASE_URL (postgres://user:pass@host:port/db) into Npgsql connection string
+    var uri = new Uri(databaseUrl);
+    var userInfo = uri.UserInfo.Split(':');
+    var builderConn = new Npgsql.NpgsqlConnectionStringBuilder
+    {
+        Host = uri.Host,
+        Port = uri.Port,
+        Username = userInfo.Length > 0 ? userInfo[0] : string.Empty,
+        Password = userInfo.Length > 1 ? userInfo[1] : string.Empty,
+        Database = uri.AbsolutePath.TrimStart('/'),
+        SslMode = Npgsql.SslMode.Require,
+        TrustServerCertificate = true
+    };
+    builder.Services.AddDbContext<AppDb>(opt => opt.UseNpgsql(builderConn.ToString()));
+}
+else
+{
+    // Local fallback (sqlite)
+    builder.Services.AddDbContext<AppDb>(opt =>
+        opt.UseSqlite(defaultConn));
+}
 
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 builder.Services.AddScoped<IDeliveryRepository, DeliveryRepository>();
@@ -40,7 +64,23 @@ builder.Services.AddSwaggerGen(c =>
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
-    Seeder.Seed(scope.ServiceProvider.GetRequiredService<AppDb>());
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDb>();
+    try
+    {
+        // If migrations are present, apply them. Otherwise fall back to EnsureCreated for initial schema.
+        if (db.Database.GetMigrations().Any())
+            db.Database.Migrate();
+        else
+            db.Database.EnsureCreated();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Database migration error: {ex.Message}");
+    }
+
+    Seeder.Seed(db);
+}
 
 app.UseCors();
 app.UseAuthentication();

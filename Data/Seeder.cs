@@ -7,8 +7,7 @@ public static class Seeder
 {
     public static void Seed(AppDb db)
     {
-        db.Database.EnsureCreated();
-
+        // Assumes migrations have been applied. Seed only when empty to avoid overwriting data.
         if (!db.Businesses.Any())
             db.Businesses.Add(new Business
             {
