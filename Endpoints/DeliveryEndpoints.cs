@@ -108,6 +108,26 @@ public static class DeliveryEndpoints
             return delivery is null ? Results.NotFound() : Results.Ok(delivery);
         });
 
+        app.MapPut("/deliveries/{id}/assign", async (HttpContext ctx, Guid id, AssignPilotRequest req, IDeliveryRepository repo, IPilotRepository pilotRepo) =>
+        {
+            var user = ctx.User;
+            var role = user?.FindFirst("role")?.Value ?? user?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            if (user?.Identity?.IsAuthenticated != true || role != "business")
+                return Results.Forbid();
+
+            var profileId = Guid.Parse(user.FindFirst("profileId")?.Value ?? Guid.Empty.ToString());
+            var delivery = await repo.GetByIdAsync(id);
+            if (delivery is null || delivery.BusinessId != profileId)
+                return Results.Forbid();
+
+            var pilot = await pilotRepo.GetByIdAsync(req.PilotId);
+            if (pilot is null)
+                return Results.NotFound();
+
+            var updated = await repo.AssignPilotAsync(id, req.PilotId);
+            return updated is null ? Results.NotFound() : Results.Ok(updated);
+        });
+
         app.MapPost("/deliveries/{id}/quotes", async (HttpContext ctx, Guid id, SubmitQuoteRequest req, IPilotRepository pilotRepo, IDeliveryRepository repo) =>
         {
             var user = ctx.User;

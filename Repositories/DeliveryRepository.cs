@@ -50,6 +50,23 @@ public class DeliveryRepository(AppDb db) : IDeliveryRepository
         return delivery;
     }
 
+    public async Task<Delivery?> AssignPilotAsync(Guid deliveryId, Guid pilotId)
+    {
+        var delivery = await db.Deliveries
+            .Include(d => d.Stops)
+            .Include(d => d.Quotes)
+            .FirstOrDefaultAsync(d => d.Id == deliveryId);
+
+        if (delivery is null) return null;
+
+        delivery.AssignedPilotId = pilotId;
+        delivery.Status = "confirmed";
+        delivery.IsPublic = false;
+
+        await db.SaveChangesAsync();
+        return delivery;
+    }
+
     public async Task<Quote?> AddQuoteAsync(Guid deliveryId, Quote quote)
     {
         var delivery = await db.Deliveries.FindAsync(deliveryId);

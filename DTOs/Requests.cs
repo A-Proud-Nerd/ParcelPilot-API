@@ -25,4 +25,6 @@ public record SubmitQuoteRequest(
     int? ExpiresInMinutes
 );
 
+public record AssignPilotRequest(Guid PilotId);
+
 public record UpdateStatusRequest(string Status);
