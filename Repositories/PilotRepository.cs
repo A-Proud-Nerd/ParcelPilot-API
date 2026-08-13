@@ -7,17 +7,50 @@ namespace ParcelPilot.Api.Repositories;
 
 public class PilotRepository(AppDb db) : IPilotRepository
 {
-    public async Task<List<PilotDto>> GetAllAsync() =>
-        (await db.Pilots
+    public async Task<List<PilotDto>> GetAllAsync()
+    {
+        var pilots = await db.Pilots
             .Where(p => p.VerificationStatus == "verified")
-            .ToListAsync())
-        .Select(p => p.ToDto())
-        .ToList();
+            .ToListAsync();
+
+        var emails = await db.Users
+            .Where(u => u.Role == "pilot")
+            .ToDictionaryAsync(u => u.ProfileId, u => u.Email);
+
+        return pilots
+            .Select(p => p.ToDto(emails.TryGetValue(p.Id, out var email) ? email : null))
+            .ToList();
+    }
 
     public async Task<PilotDto?> GetByIdAsync(Guid id)
     {
         var pilot = await db.Pilots.FindAsync(id);
-        return pilot?.ToDto();
+        if (pilot is null)
+            return null;
+
+        var email = await db.Users
+            .Where(u => u.Role == "pilot" && u.ProfileId == id)
+            .Select(u => u.Email)
+            .FirstOrDefaultAsync();
+
+        return pilot.ToDto(email);
+    }
+
+    public async Task<PilotDto?> TogglePreferredAsync(Guid pilotId, bool isPreferred)
+    {
+        var pilot = await db.Pilots.FirstOrDefaultAsync(p => p.Id == pilotId);
+        if (pilot is null)
+            return null;
+
+        pilot.IsPreferred = isPreferred;
+        await db.SaveChangesAsync();
+
+        var email = await db.Users
+            .Where(u => u.Role == "pilot" && u.ProfileId == pilotId)
+            .Select(u => u.Email)
+            .FirstOrDefaultAsync();
+
+        return pilot.ToDto(email);
     }
 
     public async Task<PilotDto?> UpdateProfileAsync(Guid pilotId, UpdatePilotProfileRequest req)
@@ -83,6 +116,23 @@ public class PilotRepository(AppDb db) : IPilotRepository
         }
 
         await db.SaveChangesAsync();
-        return pilot.ToDto();
+        return pilot.ToDto(user.Email);
+    }
+
+    public async Task<PilotDto?> SetOnlineStatusAsync(Guid pilotId, bool isOnline)
+    {
+        var pilot = await db.Pilots.FirstOrDefaultAsync(p => p.Id == pilotId);
+        if (pilot is null)
+            return null;
+
+        pilot.IsOnline = isOnline;
+        await db.SaveChangesAsync();
+
+        var email = await db.Users
+            .Where(u => u.Role == "pilot" && u.ProfileId == pilotId)
+            .Select(u => u.Email)
+            .FirstOrDefaultAsync();
+
+        return pilot.ToDto(email);
     }
 }

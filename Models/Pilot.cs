@@ -20,10 +20,10 @@ public class Pilot
     public decimal BaseFee { get; set; }
     public string Phone { get; set; } = "";
 
-    public PilotDto ToDto() => new(
+    public PilotDto ToDto(string? email = null) => new(
         Id, Name, Rating, CompletedDeliveries, ReliabilityScore,
         VehicleType, VehiclePlate,
         JsonSerializer.Deserialize<string[]>(ZonesJson) ?? [],
-        IsPreferred, IsOnline, VerificationStatus, PerKmRate, BaseFee, Phone
+        IsPreferred, IsOnline, VerificationStatus, PerKmRate, BaseFee, Phone, email ?? ""
     );
 }

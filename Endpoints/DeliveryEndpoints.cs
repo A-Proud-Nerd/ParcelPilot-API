@@ -182,7 +182,9 @@ public static class DeliveryEndpoints
                 return Results.BadRequest("Pilot id mismatch.");
 
             var delivery = await repo.GetByIdAsync(id);
-            if (delivery == null || !delivery.IsPublic || delivery.Status != "awaiting_approval")
+            var isEligibleForNegotiation = delivery != null && (delivery.IsPublic || delivery.RequestedPilotId == req.PilotId);
+            var isOpenStatus = delivery != null && (delivery.Status == "awaiting_approval" || delivery.Status == "awaiting_pilot_response");
+            if (!isEligibleForNegotiation || !isOpenStatus)
                 return Results.BadRequest("Delivery not open for quotes.");
 
             var pilot = await pilotRepo.GetByIdAsync(req.PilotId);
@@ -215,12 +217,27 @@ public static class DeliveryEndpoints
                 return Results.Forbid();
 
             var profileId = Guid.Parse(user.FindFirst("profileId")?.Value ?? Guid.Empty.ToString());
-            // Ensure business owns the delivery
             var delivery = await repo.GetByIdAsync(id);
             if (delivery == null || delivery.BusinessId != profileId)
                 return Results.Forbid();
 
             var updated = await repo.AcceptQuoteAsync(id, qid);
+            return updated is null ? Results.NotFound() : Results.Ok(updated);
+        });
+
+        app.MapPut("/deliveries/{id}/quotes/{qid}/decline", async (HttpContext ctx, Guid id, Guid qid, IDeliveryRepository repo) =>
+        {
+            var user = ctx.User;
+            var role = user?.FindFirst("role")?.Value ?? user?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            if (user?.Identity?.IsAuthenticated != true || role != "business")
+                return Results.Forbid();
+
+            var profileId = Guid.Parse(user.FindFirst("profileId")?.Value ?? Guid.Empty.ToString());
+            var delivery = await repo.GetByIdAsync(id);
+            if (delivery == null || delivery.BusinessId != profileId)
+                return Results.Forbid();
+
+            var updated = await repo.RejectQuoteAsync(id, qid);
             return updated is null ? Results.NotFound() : Results.Ok(updated);
         });
     }

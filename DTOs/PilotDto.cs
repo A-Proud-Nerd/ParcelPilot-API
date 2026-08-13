@@ -14,5 +14,6 @@ public record PilotDto(
     string VerificationStatus,
     decimal PerKmRate,
     decimal BaseFee,
-    string Phone
+    string Phone,
+    string Email
 );

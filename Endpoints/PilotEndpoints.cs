@@ -34,5 +34,17 @@ public static class PilotEndpoints
                 return Results.BadRequest(new { error = ex.Message });
             }
         });
+
+        app.MapPut("/pilots/me/availability", async (HttpContext ctx, bool isOnline, IPilotRepository repo) =>
+        {
+            var user = ctx.User;
+            var role = user?.FindFirst("role")?.Value ?? user?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            if (user?.Identity?.IsAuthenticated != true || role != "pilot")
+                return Results.Forbid();
+
+            var pilotId = Guid.Parse(user.FindFirst("profileId")?.Value ?? Guid.Empty.ToString());
+            var updated = await repo.SetOnlineStatusAsync(pilotId, isOnline);
+            return updated is null ? Results.NotFound() : Results.Ok(updated);
+        });
     }
 }

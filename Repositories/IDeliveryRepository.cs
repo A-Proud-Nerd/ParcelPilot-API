@@ -14,4 +14,5 @@ public interface IDeliveryRepository
     Task<Delivery?> DeclineRequestAsync(Guid deliveryId, Guid pilotId);
     Task<Quote?> AddQuoteAsync(Guid deliveryId, Quote quote);
     Task<Delivery?> AcceptQuoteAsync(Guid deliveryId, Guid quoteId);
+    Task<Delivery?> RejectQuoteAsync(Guid deliveryId, Guid quoteId);
 }
