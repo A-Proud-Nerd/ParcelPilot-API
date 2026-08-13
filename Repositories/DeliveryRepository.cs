@@ -23,18 +23,48 @@ public class DeliveryRepository(AppDb db) : IDeliveryRepository
         delivery.TotalCharge = delivery.AgreedSubtotal + delivery.ServiceFee;
     }
 
-    public Task<List<Delivery>> GetAllAsync() =>
-        db.Deliveries
+    private async Task NormalizeZeroPriceAsync(Delivery delivery)
+    {
+        if (delivery.AgreedSubtotal > 0m)
+            return;
+
+        var requestedPilotId = delivery.RequestedPilotId;
+        var pilot = requestedPilotId is Guid pid
+            ? await db.Pilots.FirstOrDefaultAsync(p => p.Id == pid)
+            : null;
+
+        EnsureEstimatedPrice(delivery, pilot?.BaseFee, pilot?.PerKmRate);
+        if (delivery.AgreedSubtotal > 0m)
+            await db.SaveChangesAsync();
+    }
+
+    public async Task<List<Delivery>> GetAllAsync()
+    {
+        var deliveries = await db.Deliveries
             .Include(d => d.Quotes)
             .Include(d => d.Stops)
             .OrderByDescending(d => d.CreatedAt)
             .ToListAsync();
 
-    public Task<Delivery?> GetByIdAsync(Guid id) =>
-        db.Deliveries
+        foreach (var delivery in deliveries)
+            await NormalizeZeroPriceAsync(delivery);
+
+        return deliveries;
+    }
+
+    public async Task<Delivery?> GetByIdAsync(Guid id)
+    {
+        var delivery = await db.Deliveries
             .Include(d => d.Quotes)
             .Include(d => d.Stops)
             .FirstOrDefaultAsync(d => d.Id == id);
+
+        if (delivery is null)
+            return null;
+
+        await NormalizeZeroPriceAsync(delivery);
+        return delivery;
+    }
 
     public async Task<Delivery> CreateAsync(Delivery delivery)
     {
