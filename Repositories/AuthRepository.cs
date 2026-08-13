@@ -37,13 +37,15 @@ public class AuthRepository(AppDb db, IConfiguration config) : IAuthRepository
         db.Users.Add(user);
         await db.SaveChangesAsync();
 
-        return (new AuthResponse(GenerateToken(user, business.Name), "business", business.Id, business.Name, business.Industry), null);
+        return (new AuthResponse(GenerateToken(user, business.Name), "business", business.Id, business.Name, business.Industry, user.Email), null);
     }
 
     public async Task<(AuthResponse? response, string? error)> RegisterPilotAsync(RegisterPilotRequest req)
     {
         if (await db.Users.AnyAsync(u => u.Email == req.Email))
             return (null, "Email already registered.");
+
+        var verificationStatus = EvaluatePilotVerification(req);
 
         var pilot = new Pilot
         {
@@ -57,7 +59,7 @@ public class AuthRepository(AppDb db, IConfiguration config) : IAuthRepository
             ReliabilityScore = 0,
             IsPreferred = false,
             IsOnline = false,
-            VerificationStatus = "pending",
+            VerificationStatus = verificationStatus,
             PerKmRate = 0,
             BaseFee = 0
         };
@@ -74,7 +76,7 @@ public class AuthRepository(AppDb db, IConfiguration config) : IAuthRepository
         db.Users.Add(user);
         await db.SaveChangesAsync();
 
-        return (new AuthResponse(GenerateToken(user, pilot.Name), "pilot", pilot.Id, pilot.Name, null), null);
+        return (new AuthResponse(GenerateToken(user, pilot.Name), "pilot", pilot.Id, pilot.Name, null, user.Email), null);
     }
 
     public async Task<(AuthResponse? response, string? error)> LoginAsync(LoginRequest req)
@@ -96,7 +98,23 @@ public class AuthRepository(AppDb db, IConfiguration config) : IAuthRepository
             name = (await db.Pilots.FindAsync(user.ProfileId))?.Name ?? "";
         }
 
-        return (new AuthResponse(GenerateToken(user, name), user.Role, user.ProfileId, name, industry), null);
+        return (new AuthResponse(GenerateToken(user, name), user.Role, user.ProfileId, name, industry, user.Email), null);
+    }
+
+    private static string EvaluatePilotVerification(RegisterPilotRequest req)
+    {
+        var requiredFields = new[]
+        {
+            req.Name,
+            req.Email,
+            req.Phone,
+            req.City,
+            req.VehicleType,
+            req.IdNumber
+        };
+
+        var isEligible = requiredFields.All(value => !string.IsNullOrWhiteSpace(value));
+        return isEligible ? "verified" : "pending";
     }
 
     private string GenerateToken(User user, string name)

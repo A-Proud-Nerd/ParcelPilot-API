@@ -26,5 +26,6 @@ public record AuthResponse(
     string Role,
     Guid ProfileId,
     string Name,
-    string? Industry
+    string? Industry,
+    string? Email = null
 );

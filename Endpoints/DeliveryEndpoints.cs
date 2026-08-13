@@ -18,7 +18,9 @@ public static class DeliveryEndpoints
                 var pidClaim = user.FindFirst("profileId")?.Value;
                 if (role == "pilot" && Guid.TryParse(pidClaim, out var pilotId))
                 {
-                    var visible = deliveries.Where(d => d.AssignedPilotId == pilotId || d.IsPublic).ToList();
+                    var visible = deliveries
+                        .Where(d => d.AssignedPilotId == pilotId || d.RequestedPilotId == pilotId)
+                        .ToList();
                     return Results.Ok(visible);
                 }
 
@@ -83,19 +85,20 @@ public static class DeliveryEndpoints
                 ]
             };
 
-            // Assignment rules
+            // Request-first matching flow: direct pilot requests create a private, targeted request.
             if (req.PilotId.HasValue)
             {
-                delivery.AssignedPilotId = req.PilotId.Value;
-                delivery.Status = "confirmed"; // directly assigned to chosen pilot
+                delivery.RequestedPilotId = req.PilotId.Value;
+                delivery.RequestedAt = DateTime.UtcNow;
+                delivery.Status = "awaiting_pilot_response";
             }
             else if (req.IsPublic)
             {
-                delivery.Status = "awaiting_approval"; // open for quotes
+                delivery.Status = "awaiting_approval";
             }
             else
             {
-                delivery.Status = "awaiting_pilot"; // private, business will search/assign
+                delivery.Status = "awaiting_pilot";
             }
 
             var created = await repo.CreateAsync(delivery);
@@ -106,6 +109,45 @@ public static class DeliveryEndpoints
         {
             var delivery = await repo.UpdateStatusAsync(id, req.Status);
             return delivery is null ? Results.NotFound() : Results.Ok(delivery);
+        });
+
+        app.MapPut("/deliveries/{id}/request-pilot", async (HttpContext ctx, Guid id, AssignPilotRequest req, IDeliveryRepository repo, IPilotRepository pilotRepo) =>
+        {
+            var user = ctx.User;
+            var role = user?.FindFirst("role")?.Value ?? user?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            if (user?.Identity?.IsAuthenticated != true || role != "business")
+                return Results.Forbid();
+
+            var profileId = Guid.Parse(user.FindFirst("profileId")?.Value ?? Guid.Empty.ToString());
+            var delivery = await repo.GetByIdAsync(id);
+            if (delivery is null || delivery.BusinessId != profileId)
+                return Results.Forbid();
+
+            var pilot = await pilotRepo.GetByIdAsync(req.PilotId);
+            if (pilot is null)
+                return Results.NotFound();
+
+            var updated = await repo.RequestPilotAsync(id, req.PilotId);
+            return updated is null ? Results.NotFound() : Results.Ok(updated);
+        });
+
+        app.MapPut("/deliveries/{id}/respond-request", async (HttpContext ctx, Guid id, RespondToRequestRequest req, IDeliveryRepository repo) =>
+        {
+            var user = ctx.User;
+            var role = user?.FindFirst("role")?.Value ?? user?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            if (user?.Identity?.IsAuthenticated != true || role != "pilot")
+                return Results.Forbid();
+
+            var pilotId = Guid.Parse(user.FindFirst("profileId")?.Value ?? Guid.Empty.ToString());
+            var delivery = await repo.GetByIdAsync(id);
+            if (delivery is null || delivery.RequestedPilotId != pilotId)
+                return Results.Forbid();
+
+            var updated = req.Accept
+                ? await repo.AcceptRequestAsync(id, pilotId)
+                : await repo.DeclineRequestAsync(id, pilotId);
+
+            return updated is null ? Results.NotFound() : Results.Ok(updated);
         });
 
         app.MapPut("/deliveries/{id}/assign", async (HttpContext ctx, Guid id, AssignPilotRequest req, IDeliveryRepository repo, IPilotRepository pilotRepo) =>

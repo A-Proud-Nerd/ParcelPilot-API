@@ -27,4 +27,14 @@ public record SubmitQuoteRequest(
 
 public record AssignPilotRequest(Guid PilotId);
 
+public record RespondToRequestRequest(bool Accept);
+
+public record UpdatePilotProfileRequest(
+    string? Name,
+    string? Email,
+    string? Phone,
+    string? City,
+    string? VehicleType
+);
+
 public record UpdateStatusRequest(string Status);

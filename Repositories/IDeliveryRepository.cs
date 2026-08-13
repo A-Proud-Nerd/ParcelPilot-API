@@ -9,6 +9,9 @@ public interface IDeliveryRepository
     Task<Delivery> CreateAsync(Delivery delivery);
     Task<Delivery?> UpdateStatusAsync(Guid id, string status);
     Task<Delivery?> AssignPilotAsync(Guid deliveryId, Guid pilotId);
+    Task<Delivery?> RequestPilotAsync(Guid deliveryId, Guid pilotId);
+    Task<Delivery?> AcceptRequestAsync(Guid deliveryId, Guid pilotId);
+    Task<Delivery?> DeclineRequestAsync(Guid deliveryId, Guid pilotId);
     Task<Quote?> AddQuoteAsync(Guid deliveryId, Quote quote);
     Task<Delivery?> AcceptQuoteAsync(Guid deliveryId, Guid quoteId);
 }

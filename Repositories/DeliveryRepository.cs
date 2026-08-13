@@ -60,7 +60,67 @@ public class DeliveryRepository(AppDb db) : IDeliveryRepository
         if (delivery is null) return null;
 
         delivery.AssignedPilotId = pilotId;
+        delivery.RequestedPilotId = null;
+        delivery.RequestedAt = null;
         delivery.Status = "confirmed";
+        delivery.IsPublic = false;
+
+        await db.SaveChangesAsync();
+        return delivery;
+    }
+
+    public async Task<Delivery?> RequestPilotAsync(Guid deliveryId, Guid pilotId)
+    {
+        var delivery = await db.Deliveries
+            .Include(d => d.Stops)
+            .Include(d => d.Quotes)
+            .FirstOrDefaultAsync(d => d.Id == deliveryId);
+
+        if (delivery is null) return null;
+
+        delivery.RequestedPilotId = pilotId;
+        delivery.RequestedAt = DateTime.UtcNow;
+        delivery.AssignedPilotId = null;
+        delivery.Status = "awaiting_pilot_response";
+        delivery.IsPublic = false;
+
+        await db.SaveChangesAsync();
+        return delivery;
+    }
+
+    public async Task<Delivery?> AcceptRequestAsync(Guid deliveryId, Guid pilotId)
+    {
+        var delivery = await db.Deliveries
+            .Include(d => d.Stops)
+            .Include(d => d.Quotes)
+            .FirstOrDefaultAsync(d => d.Id == deliveryId);
+
+        if (delivery is null || delivery.RequestedPilotId != pilotId)
+            return null;
+
+        delivery.AssignedPilotId = pilotId;
+        delivery.RequestedPilotId = null;
+        delivery.RequestedAt = null;
+        delivery.Status = "confirmed";
+        delivery.IsPublic = false;
+
+        await db.SaveChangesAsync();
+        return delivery;
+    }
+
+    public async Task<Delivery?> DeclineRequestAsync(Guid deliveryId, Guid pilotId)
+    {
+        var delivery = await db.Deliveries
+            .Include(d => d.Stops)
+            .Include(d => d.Quotes)
+            .FirstOrDefaultAsync(d => d.Id == deliveryId);
+
+        if (delivery is null || delivery.RequestedPilotId != pilotId)
+            return null;
+
+        delivery.RequestedPilotId = null;
+        delivery.RequestedAt = null;
+        delivery.Status = "awaiting_pilot";
         delivery.IsPublic = false;
 
         await db.SaveChangesAsync();
