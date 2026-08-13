@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using ParcelPilot.Api.Data;
 using ParcelPilot.Api.Endpoints;
+using ParcelPilot.Api.Realtime;
 using ParcelPilot.Api.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -96,5 +97,31 @@ app.MapAuthEndpoints();
 app.MapDeliveryEndpoints();
 app.MapPilotEndpoints();
 app.MapBusinessEndpoints();
+
+app.MapGet("/delivery-events", async (HttpContext context) =>
+{
+    context.Response.Headers.Append("Cache-Control", "no-cache");
+    context.Response.Headers.Append("Connection", "keep-alive");
+    context.Response.ContentType = "text/event-stream";
+
+    var subscriberId = DeliveryEventHub.Subscribe();
+    context.Response.OnCompleted(() =>
+    {
+        DeliveryEventHub.Unsubscribe(subscriberId);
+        return Task.CompletedTask;
+    });
+
+    var reader = DeliveryEventHub.GetReader(subscriberId);
+    if (reader is null)
+    {
+        return;
+    }
+
+    await foreach (var payload in reader.ReadAllAsync(context.RequestAborted))
+    {
+        await context.Response.WriteAsync($"data: {payload}\n\n");
+        await context.Response.Body.FlushAsync(context.RequestAborted);
+    }
+});
 
 app.Run();

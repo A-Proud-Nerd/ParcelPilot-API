@@ -1,5 +1,6 @@
 using ParcelPilot.Api.DTOs;
 using ParcelPilot.Api.Models;
+using ParcelPilot.Api.Realtime;
 using ParcelPilot.Api.Repositories;
 
 namespace ParcelPilot.Api.Endpoints;
@@ -102,12 +103,17 @@ public static class DeliveryEndpoints
             }
 
             var created = await repo.CreateAsync(delivery);
+            await DeliveryEventHub.BroadcastAsync(created.Id);
             return Results.Created($"/deliveries/{created.Id}", created);
         });
 
         app.MapPut("/deliveries/{id}/status", async (Guid id, UpdateStatusRequest req, IDeliveryRepository repo) =>
         {
             var delivery = await repo.UpdateStatusAsync(id, req.Status);
+            if (delivery is not null)
+            {
+                await DeliveryEventHub.BroadcastAsync(id);
+            }
             return delivery is null ? Results.NotFound() : Results.Ok(delivery);
         });
 
@@ -128,6 +134,10 @@ public static class DeliveryEndpoints
                 return Results.NotFound();
 
             var updated = await repo.RequestPilotAsync(id, req.PilotId);
+            if (updated is not null)
+            {
+                await DeliveryEventHub.BroadcastAsync(id);
+            }
             return updated is null ? Results.NotFound() : Results.Ok(updated);
         });
 
@@ -147,6 +157,10 @@ public static class DeliveryEndpoints
                 ? await repo.AcceptRequestAsync(id, pilotId)
                 : await repo.DeclineRequestAsync(id, pilotId);
 
+            if (updated is not null)
+            {
+                await DeliveryEventHub.BroadcastAsync(id);
+            }
             return updated is null ? Results.NotFound() : Results.Ok(updated);
         });
 
@@ -167,6 +181,10 @@ public static class DeliveryEndpoints
                 return Results.NotFound();
 
             var updated = await repo.AssignPilotAsync(id, req.PilotId);
+            if (updated is not null)
+            {
+                await DeliveryEventHub.BroadcastAsync(id);
+            }
             return updated is null ? Results.NotFound() : Results.Ok(updated);
         });
 
@@ -204,6 +222,10 @@ public static class DeliveryEndpoints
             };
 
             var created = await repo.AddQuoteAsync(id, quote);
+            if (created is not null)
+            {
+                await DeliveryEventHub.BroadcastAsync(id);
+            }
             return created is null
                 ? Results.BadRequest("Delivery not found or not open for quotes.")
                 : Results.Created($"/deliveries/{id}/quotes/{created.Id}", created);
@@ -222,6 +244,10 @@ public static class DeliveryEndpoints
                 return Results.Forbid();
 
             var updated = await repo.AcceptQuoteAsync(id, qid);
+            if (updated is not null)
+            {
+                await DeliveryEventHub.BroadcastAsync(id);
+            }
             return updated is null ? Results.NotFound() : Results.Ok(updated);
         });
 
@@ -238,6 +264,10 @@ public static class DeliveryEndpoints
                 return Results.Forbid();
 
             var updated = await repo.RejectQuoteAsync(id, qid);
+            if (updated is not null)
+            {
+                await DeliveryEventHub.BroadcastAsync(id);
+            }
             return updated is null ? Results.NotFound() : Results.Ok(updated);
         });
     }
